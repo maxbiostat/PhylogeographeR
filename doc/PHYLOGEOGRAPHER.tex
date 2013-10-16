@@ -1,0 +1,103 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{indentfirst}
+\usepackage{amsmath}
+
+\title {PhyloGeographeR: phylogeography simulation incorporating geographic information}
+\author{Luiz Max F. de Carvalho\\
+Program for Scientific Computing (PROCC) - Fiocruz\\
+Brazil}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This PDF is just a very basic proposal of some strategies for structuring a continuous time Markov chain (CTMC) emission matrix ($\mathbf{Q}$) incorporating geographic information. I introduce some definitions and notation and then explain the idea behind PhyloGeographeR and some aspects of the silly piece of code I have written to implement it.\footnote{DISCLAIMER: This is \textbf{not} a vignette. This text is intended solely to help explaining some aspects of the simulation tools included in ``phylogeographeR.R" and its companion, ``phylogeographeR\_aux.R"}
+\end{abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Background and motivation}
+\indent Since Lemey et al (2009) \cite{Lemey2009} proposed a Markov model for discrete phylogeography, great attention has been paid to applying the discrete phylogeography methods implemented in the BEAST package to the study of the spatial spread of many organisms, mainly human pathogens, such as influenza \cite{Nelson2011,Bahl2011} and HIV \cite{Faria2012a,Faria2012b}. In Faria et al (2011) \cite{Faria2011} the authors argue that a quantitative understanding of the spatio-temporal spread of viruses could provide not only means for formal hypothesis testing, but also an integrated prediction framework.\\
+\indent This representation of geography is, however, quite limited, and relies on strong simplifications of the physical scenario. This may, however, be ameliorated by incorporating neighborhood structure into the CMTC rate matrix formulation, as well as exploring other geographic variables and models, such as source-sink, population gravity and distance-weighted flow.\\ 
+\indent In this context, a simulation tool that is able to  incorporate geographic information into a CTMC-based discrete trait simulator seems to be a good option for generating synthetic data under different phylogeographic scenarios. Such simulations could prove useful for the task of testing the available inference frameworks as well as gaining insight into the spatial dynamics itself.\\ 
+\indent This document and the R code described herein concern the problem of incorporating geographic information in CTMC models of discrete phylogeography.\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Some useful definitions and notation}
+\indent In what follows, I introduce some notation, outline the basics on Continuous-time Markov chains and present some ideas on how to incorporate geographic information on CTMC-based discrete trait generation along a phylogeny.\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Continuous-time Markov chain (CTMC)}
+\indent Continuous-time Markov chains (CTMCs) are very useful modeling tools, widely used in models of chemical reactions, queueing systems and molecular evolution. A CTMC is a discrete stochastic process $X(t), t\geq0$ taking values in \{0,1,2,\ldots, K\} for which the Markov property holds, i.e, for $s,t\geq 0$ and all states $i$, $j$, $x(u)$:
+\begin{equation}
+\label{ctmc}
+\begin{split}
+P(X(t+s)) &= j|X(s) =i, X(u)=x(u))) = P(X(t+s)=j|X(s)=i)\\ 
+& = \pi_{ij}(t) \quad \forall \space 0\leq u < s
+\end{split}
+\end{equation}
+Where $\pi_{ij}$ denotes the stationary transition probability.\\
+\indent A desirable property is that the process is completely governed by a transition matrix $\mathbf{Q}$. We formulate $\mathbf{Q}$ so that upon exponentiation it yields a stochastic matrix:
+\begin{align}
+\label{qform}
+ \pi_{ij}(t) = e^{t\mathbf{Q}} \\
+ \mathbf{Q} = \mu\mathbf{S}\Pi
+\end{align}
+Where $\mu$ is a rate scalar, $\mathbf{S}$ is symmetric or nearly symmetric $K$-order matrix and $\Pi$ = $\pi_1, \pi_2,\ldots, \pi_k$ is a diagonal matrix.\\
+\indent For such, the following condition is needed:
+\begin{equation}
+\mathbf{Q_{ii}} = -\sum_{i \neq j}^K{\mathbf{Q_{ij}}}  \quad \forall{ i \in \{1,2,3,\ldots,K\}}
+\label{sumconst}
+\end{equation}
+\indent Lemey et al (2009) \cite{Lemey2009} proposed using a CTMC to model the diffusion of a given organism through time and space. In this framework, the locations of sampling for each taxon in a phylogeny are treated as CTMC observed states, and branch lengths are seen as the elapsed times between transitions. This allows for the inference of transitions through time, therefore providing insight into the transmission network of pathogens. Moreover, it is possible to infer the probability distribution for each state (location) in every node of the phylogeny. This is specially important for the root of the given phylogeny, for it offers insight into the spatial origins of epidemics.\\
+\indent Although this approach provides an efficient statistical framework to the study of phylogeography, it is also restricted to a simple representation of geographic space.\\
+\indent Several studies have adressed this problem by incorporating environmental information into prior distributions for the rates of the transition matrix \cite{Lemey2009,Faria2012a,Carvalho2012,Nelson2011}, for example, geographic distances, differences in population sizes and vaccination status between locations. These ``informed'' priors have played an important role in testing evolutionary hypothesis about spatial diffusion. In this document, I study how to incorporate such environmental data into phylogeography simulation. Importantly, such development should take CTMC-associated constraints into account, and further analysis is in order to avoid ill-posed decomposition problems on matrix exponentiation.\\
+\subsection{Neighborhood structure}
+Consider a region $\mathbf{R}$ consisting of $K$ areas $A_i$, $i \in \{1, 2,3,\ldots, K\}$, to which belongs a vector of attributes $\mathbf{v_i}$ each.\\
+%%%%%%%%%%%%%%%%%%%%%
+\section{General Structure}
+\indent To attain to the restriction in \(\ref{sumconst}\), a wrapper named \verb|reg.matrix()| is called to regularize the matrix by adjusting its principal diagnonal so that row-wise summation equals zero.\\
+\subsection{Models}
+\subsubsection{Homogeneous}
+\indent We begin by specifying the simplest possible model for $\mathbf{Q}$. If there is no preference of flux between locations, we make each  non-diagonal entry of $\mathbf{Q}$  equal to $1/K$ and subsequentially parameterize diag($\mathbf{Q}$) to meet restriction (\ref{sumconst}), which yields $\mathbf{Q_{ii}} = -(K-1)/K$. In the limit of large $K$, $\mathbf{Q_{ii}} \to -1$, placing almost all mass outside the diagonal.\\
+\indent This model is intended to serve as a base-line, for instance to investigate the sole influence of tree topology, i.e., population dynamics when there is no detectable geographical signal.\\
+\subsubsection{Contiguity-constrained Homogeneous}
+\indent Sometimes it can be of interest to assume that flow can only occur between neighbor areas, whilst not assuming any directionality. This ``model" can be achieved by formulating $\mathbf{Q}$ as the element-wise multiplication of the  $\mathbf{Q}$ described above and the contiguity matrix. Let $k_i$ be the degree -- i.e., number of neighbors -- of area $i$ the and $\hat{k}$ be the average degree of the contiguity graph. It is easy to see that:
+\begin{equation}
+\mathbf{Q_{ii}} = -\frac{k_i}{K} \quad \forall i \in \{1,2,\ldots,K\} 
+\end{equation}
+and $E[diag(\mathbf{Q})] = - \hat{k}/K$.\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Distance-informed}
+\indent In the original paper Lemey et al (2009) \cite{Lemey2009} proposed a distance-informed prior for $\mathbf{Q}$, in which infinitesimal rates are proportional to:
+\begin{equation}
+ \mathbf{Q_{ij}} = C\frac{d_{ij}^{-1}}{\sum_{i<j}d_{ij}^{-1}}
+\end{equation}
+where $d_{ij}$ is the great-circle distance between locations $i$ and $j$.\\ 
+\subsubsection{``Patchy"}
+\subsubsection{Gravity}
+Gravity priors are built so that they attain to the form:
+\begin{equation}
+ d(i,j) = f(\mathbf{v_i}), \sum_{i\neq j}^K{d(i,j)} = 1
+\label{gravity}
+\end{equation}
+%%%%%%%%%%%%%%%%%%
+\subsubsection{Source-sink}
+\indent The function \verb|build.ss.matrix()| builds $\mathbf{Q}$ according to a ``source-sink" model, where some locations act mainly as emiters (sources) and others as receptors (sinks). A parameter, $\rho$, controls the magnitude of this flow. Let $\delta_{ss}(i,j)$ be an indicator function that assigns $2$ to source-to-sink entries in $\mathbf{Q}$, $1$ to sink-to-source ones and $0$ otherwise .Then the model is specified according to:
+\begin{equation}
+ \mathbf{Q_{ij}} =  \delta_{ss}\{i,j\}
+\end{equation}
+\section{Implementation}
+\subsection{Dependencies}
+\subsection{Main Features}
+\indent At the moment, a the code has a few features:
+\begin{itemize}
+ \item Ability to simulate coalescent processes with  varying  growth rates;
+ \item Benefit from the R (\textbf{seqgen}) adaptation of the original C code by Prof. Andrew Rambaut of \textbf{Seq-Gen} to generate nucleotide/aminoacid sequences under quite complex models; 
+\end{itemize}
+\subsection{Options}
+\subsection{TODO list}
+\begin{itemize}
+ \item Further theoretical study on the geographical models to structure $\mathbf{Q}$, to ensure real eigen decomposition is possible.
+ \item More population growth models. Currently only exponential (and constant, of course) growth is implemented.
+ \item Maybe make a function of it, which would read a file of parameters.
+\end{itemize}
+\bibliographystyle{plain}
+\bibliography{PHYLOGEOGRAPHER}
+\end{document}
