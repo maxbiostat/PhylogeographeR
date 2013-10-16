@@ -1,4 +1,4 @@
-PhyloGeoSim
+PhyloGeographeR
 ===========
 
 A set of R scripts to simulate phylogeography  using Continuous time Markov Chains
