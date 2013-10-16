@@ -5,13 +5,13 @@
 
 \title {PhyloGeoSim: phylogeography simulation incorporating geographic information}
 \author{Luiz Max F. de Carvalho\\
-Pan American Center for Foot-and-Mouth Disease (PAHO/WHO)\\
+Program for Scientific Computing (PROCC) - Fiocruz\\
 Brazil}
 
 \begin{document}
 \maketitle
 \begin{abstract}
-This PDF is just a very basic proposal of some strategies for structuring a continuous time Markov chain (CTMC) emission matrix ($\mathbf{Q}$) incorporating geographic information. I introduce some definitions and notations and then explain the idea behind PhyloGeoSim and some aspects of the silly piece of code I have written to implement it.\footnote{DISCLAIMER: This is \textbf{not} a vignette. This text is intended solely to help explaining some aspects of the simulation tools included in ``phylogeosim.R" and its companion, ``phylogeosim\_aux.R"}
+This PDF is just a very basic proposal of some strategies for structuring a continuous time Markov chain (CTMC) emission matrix ($\mathbf{Q}$) incorporating geographic information. I introduce some definitions and notation and then explain the idea behind PhyloGeoSim and some aspects of the silly piece of code I have written to implement it.\footnote{DISCLAIMER: This is \textbf{not} a vignette. This text is intended solely to help explaining some aspects of the simulation tools included in ``phylogeosim.R" and its companion, ``phylogeosim\_aux.R"}
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Background and motivation}
@@ -42,7 +42,7 @@ Where $\pi_{ij}$ denotes the stationary transition probability.\\
 Where $\mu$ is a rate scalar, $\mathbf{S}$ is symmetric or nearly symmetric $K$-order matrix and $\Pi$ = $\pi_1, \pi_2,\ldots, \pi_k$ is a diagonal matrix.\\
 \indent For such, the following condition is needed:
 \begin{equation}
-\mathbf{Q_{ii}} = -\sum_{j \neq i}^K{\mathbf{Q_{ij}}}  \quad \forall{ i \in \{1,2,3,\ldots,K\}}
+\mathbf{Q_{ii}} = -\sum_{i \neq j}^K{\mathbf{Q_{ij}}}  \quad \forall{ i \in \{1,2,3,\ldots,K\}}
 \label{sumconst}
 \end{equation}
 \indent Lemey et al (2009) \cite{Lemey2009} proposed using a CTMC to model the diffusion of a given organism through time and space. In this framework, the locations of sampling for each taxon in a phylogeny are treated as CTMC observed states, and branch lengths are seen as the elapsed times between transitions. This allows for the inference of transitions through time, therefore providing insight into the transmission network of pathogens. Moreover, it is possible to infer the probability distribution for each state (location) in every node of the phylogeny. This is specially important for the root of the given phylogeny, for it offers insight into the spatial origins of epidemics.\\
